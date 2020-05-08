@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+    <head><meta charset="utf-8"/>
+        <title>Std Navy Distribution List</title>
+
+        <!-- Standard Navy Distribution List viewer.
+            Tries to take the SNDL as distributed by the Navy and read it into a database
+            that can be used from any modern web browser. You need to bring the SNDL, the app
+            is supposed to do the rest.
+
+            Copyright (c) 2020 Michael Pyne <michael.pyne@gmail.com>
+        -->
+<style>
+.drop_hover {
+    border: 2px solid green;
+}
+
+#output {
+    margin-top: 2em;
+    background: darkgray;
+    color: white;
+    font-family: monospace;
+}
+
+</style>
+    </head>
+    <body>
+        <h3>SNDL Viewer</h3>
+
+        <div id="file_drop_target">Drop SNDL.xlsx on me to load
+            <input type='file' id='file_load_target'>Or enter a file to upload</input>.</div>
+
+        <div id="content">
+            <label>Enter a UIC to read: <input id="txt_uic_entry" placeholder="00076"></input></label>
+            <button id="btn_read_uic">Read UIC</button>
+        </div>
+
+        <div id="output">
+        </div>
+
+        <script src="xlsx.full.min.js"></script>  <!-- Read Excel files -->
+        <script src="levelgraph.min.js"></script> <!-- Graph database   -->
+        <script>
+            var g_workbook_data;
+
+            function output(txt) {
+                const outputDiv = document.getElementById('output');
+                outputDiv.textContent = txt;
+                console.log(`output: ${txt}`);
+            }
+
+            function handleFileLoad(files) {
+                const file = files[0];
+                const reader = new FileReader();
+
+                reader.onload = (e) => {
+                    const data = new Uint8Array(e.target.result);
+                    const worksheet = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = worksheet.SheetNames[0];
+
+                    g_workbook_data = XLSX.utils.sheet_to_json(worksheet.Sheets[firstSheetName]);
+
+                    output(`Workbook loaded, ${g_workbook_data.length} records`);
+                }
+                reader.readAsArrayBuffer(file);
+            }
+
+            function handleFileUpload(e) {
+                console.log("Handling file upload");
+                handleFileLoad(e.target.files);
+            }
+
+            function handleFileDrop(e) {
+                e.stopPropagation(); e.preventDefault();
+
+                console.log("Handling file DND");
+                handleFileLoad(e.dataTransfer.files);
+
+                let dropTarget = document.getElementById('file_drop_target');
+                dropTarget.classList.remove('drop_hover');
+            }
+
+            function handleDragEnter(e) {
+                e.preventDefault();
+                console.log("Setting up to DND");
+                e.dataTransfer.dropEffect = 'copy';
+
+                let dropTarget = document.getElementById('file_drop_target');
+                dropTarget.classList.add('drop_hover');
+                console.log("Setup new class");
+            }
+
+            function handleDragLeave(e) {
+                e.preventDefault(); e.stopPropagation();
+
+                let dropTarget = document.getElementById('file_drop_target');
+                dropTarget.classList.remove('drop_hover');
+                console.log("Removed new class");
+            }
+
+            let dropTarget = document.getElementById('file_drop_target');
+            dropTarget.addEventListener('drop', handleFileDrop, false);
+
+            dropTarget.addEventListener('dragenter', handleDragEnter, false);
+            dropTarget.addEventListener('dragover',  handleDragEnter, false); // Same fn on purpose
+            dropTarget.addEventListener('dragleave', handleDragLeave, false);
+
+            let uploadTarget = document.getElementById('file_load_target');
+            uploadTarget.addEventListener('change', handleFileUpload, false);
+
+            let btn_UIC = document.getElementById('btn_read_uic');
+            btn_UIC.addEventListener('click', () => {
+                const uic_to_load = document.getElementById('txt_uic_entry').value;
+                console.log(`Loading UIC ${uic_to_load}`);
+
+                var i = 0;
+                const obj = g_workbook_data.filter(e => e['Unit Identification Code (UIC)'] === uic_to_load)[0];
+
+                output(`Found ${obj.ACT_TITLE}`);
+            }, false);
+        </script>
+    </body>
+</html>
