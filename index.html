@@ -42,11 +42,36 @@
         <script src="levelgraph.min.js"></script> <!-- Graph database   -->
         <script>
             var g_workbook_data;
+            var graph = levelgraph(level('uicdb'));
 
+            // Ensure the db is already empty, it may be cached from previous page view
+            graph.get({}, (err, results) => {
+                for (const res of results) {
+                    graph.del(res);
+                }
+            });
+
+            // Logging function, also goes to the web page
             function output(txt) {
                 const outputDiv = document.getElementById('output');
-                outputDiv.textContent = txt;
+                outputDiv.innerHTML = txt;
                 console.log(`output: ${txt}`);
+            }
+
+            function generateUnitGraph(db, units) {
+                // Go through the list of units and turn them into nodes and
+                // edges for the graph query
+                for (const unit of units) {
+                    if (!unit.PARENT_UIC || !unit.UIC) {
+                        continue;
+                    }
+
+                    var triple = { subject: unit.PARENT_UIC, predicate: 'isic-of', object: unit.UIC };
+
+                    db.put(triple, (err) => {
+                        if(err) { console.error(err); }
+                    });
+                }
             }
 
             function handleFileLoad(files) {
@@ -58,9 +83,22 @@
                     const worksheet = XLSX.read(data, { type: 'array' });
                     const firstSheetName = worksheet.SheetNames[0];
 
-                    g_workbook_data = XLSX.utils.sheet_to_json(worksheet.Sheets[firstSheetName]);
+                    g_workbook_data = XLSX.utils.sheet_to_json(
+                        worksheet.Sheets[firstSheetName],
+                        // Shorter names for ease of use later
+                        { header: [ 'SNDL', 'PLA', 'UIC', 'ACT_HEAD', 'ACT_TITLE',
+                                    'ACT_LINE_3', 'ACT_LINE_4', 'ACT_LINE_5', 'CITY', 'STATE',
+                                    'ZIP', 'PARENT_UIC', 'ISIC', 'ECHELON', 'ACT_CODE',
+                                    'HOMEPORT', 'PDS', 'HP_EFF_DT',
+                                  ]
+                        }
+                    );
 
                     output(`Workbook loaded, ${g_workbook_data.length} records`);
+
+                    if (g_workbook_data.length > 0) {
+                        generateUnitGraph(graph, g_workbook_data);
+                    }
                 }
                 reader.readAsArrayBuffer(file);
             }
@@ -82,12 +120,10 @@
 
             function handleDragEnter(e) {
                 e.preventDefault();
-                console.log("Setting up to DND");
                 e.dataTransfer.dropEffect = 'copy';
 
                 let dropTarget = document.getElementById('file_drop_target');
                 dropTarget.classList.add('drop_hover');
-                console.log("Setup new class");
             }
 
             function handleDragLeave(e) {
@@ -95,7 +131,6 @@
 
                 let dropTarget = document.getElementById('file_drop_target');
                 dropTarget.classList.remove('drop_hover');
-                console.log("Removed new class");
             }
 
             let dropTarget = document.getElementById('file_drop_target');
@@ -113,10 +148,36 @@
                 const uic_to_load = document.getElementById('txt_uic_entry').value;
                 console.log(`Loading UIC ${uic_to_load}`);
 
-                var i = 0;
-                const obj = g_workbook_data.filter(e => e['Unit Identification Code (UIC)'] === uic_to_load)[0];
+                const obj = g_workbook_data.filter(e => e.UIC === uic_to_load)[0];
 
-                output(`Found ${obj.ACT_TITLE}`);
+                if(obj) {
+                    var out_string = `Found ${obj.ACT_TITLE}`;
+                    console.dir(obj);
+
+                    // Look for siblings: UICs that are 'isic-of' related to the same ISIC
+                    // that isic-of points to us, by following the pointer back to the ISIC
+                    graph.nav(obj.UIC).archIn('isic-of').archOut('isic-of').
+                        solutions((err, results) => {
+                            if(err) {
+                                output(out_string);
+                                console.error(err);
+                                return;
+                            }
+
+                            if(results.length > 0) {
+                                out_string = out_string + "<br/>Sibling units: <br/>";
+                            }
+
+                            for(const res of results) {
+                                out_string = out_string + "<br/>";
+                                out_string = out_string + `${res.x1}`;
+                            }
+
+                            output(out_string);
+                        });
+                } else {
+                    output(`Found no result!`);
+                }
             }, false);
         </script>
     </body>
