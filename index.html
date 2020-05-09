@@ -46,6 +46,13 @@ div.div_hidden {
             <div id="file_drop_target">Drop SNDL.xlsx on me to load
                 <input type='file' id='file_load_target'>Or enter a file to upload</input>.</div>
 
+            <div id="file_load_msg" class="div_hidden row flex-spaces">
+                <input class="alert-state" id="file_load_alert" type="checkbox">
+                <div class="alert alert-secondary dismissable">
+                    Loading the UICs, wait one...
+                    <label class="btn-close" for="file_load_alert">X</label>
+                </div>
+            </div>
         </div>
 
         <div id="ui_lookup_uic" class="div_hidden">
@@ -151,6 +158,8 @@ div.div_hidden {
                 const file = files[0];
                 const reader = new FileReader();
 
+                document.getElementById('file_load_msg').classList.remove('div_hidden');
+
                 reader.onload = (e) => {
                     const data = new Uint8Array(e.target.result);
                     const worksheet = XLSX.read(data, { type: 'array' });
@@ -172,7 +181,9 @@ div.div_hidden {
                     showPage('ui_lookup_uic');
                 }
 
-                reader.readAsArrayBuffer(file);
+                // Use a timeout to ensure the U/I updates before we block so the banner
+                // we took pains to unhide shows up
+                window.requestAnimationFrame(() => { reader.readAsArrayBuffer(file) });
             }
 
             function handleFileUpload(e) {
