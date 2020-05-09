@@ -49,7 +49,8 @@
         <script src="levelgraph.min.js"></script> <!-- Graph database   -->
         <script>
             var g_workbook_data;
-            var graph = levelgraph(level('uicdb'));
+            let activity_db = new Map(); // Map UICs to unit info
+            let graph = levelgraph(level('uicdb'));
 
             // Ensure the db is already empty, it may be cached from previous page view
             graph.get({}, (err, results) => {
@@ -70,8 +71,11 @@
                 // edges for the graph query
                 for (const unit of units) {
                     if (!unit.PARENT_UIC || !unit.UIC) {
+                        console.log(`Ignoring UIC-less unit ${unit.ACT_TITLE}`);
                         continue;
                     }
+
+                    activity_db.set(unit.UIC, unit);
 
                     var triple = { subject: unit.PARENT_UIC, predicate: 'isic-of', object: unit.UIC };
 
@@ -176,8 +180,11 @@
                             }
 
                             for(const res of results) {
+                                const uic = res.x1;
+                                const sibling_name = activity_db.get(uic).ACT_TITLE || `Unknown unit`;
+
                                 out_string = out_string + "<br/>";
-                                out_string = out_string + `${res.x1}`;
+                                out_string = out_string + `${sibling_name} (${uic})`;
                             }
 
                             output(out_string);
