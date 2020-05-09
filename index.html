@@ -28,43 +28,105 @@
     font-family: monospace;
 }
 
+div.div_hidden {
+    display: none;
+}
+
 </style>
 </head>
 <body>
     <div class="paper container">
         <h3>SNDL Viewer</h3>
 
-        <div id="file_drop_target">Drop SNDL.xlsx on me to load
-            <input type='file' id='file_load_target'>Or enter a file to upload</input>.</div>
+        <!-- For a simple single page application we just break each page in the 'flow' into
+             unique divs with names starting with ui_. We use Javascript to set the appropriate
+             style
+        -->
+        <div id="ui_load_data" class="div_hidden">
+            <div id="file_drop_target">Drop SNDL.xlsx on me to load
+                <input type='file' id='file_load_target'>Or enter a file to upload</input>.</div>
 
-        <div id="content">
-            <label>Enter a UIC to read: <input id="txt_uic_entry" placeholder="00076"></input></label>
-            <button id="btn_read_uic">Read UIC</button>
         </div>
 
-        <div id="output">
+        <div id="ui_lookup_uic" class="div_hidden">
+            <div id="content">
+                <label>Enter a UIC to read: <input id="txt_uic_entry" placeholder="00076"></input></label>
+                <button id="btn_read_uic">Read UIC</button>
+            </div>
+
+            <div id="output">
+            </div>
         </div>
+
+        <!-- Never used, should be hidden by the JS automatically -->
+        <div id="ui_noscript_warning">
+            <h4>Javascript is disabled</h4>
+
+            <div class="row flex-spaces">
+                <div class="alert alert-primary">This page requires Javascript to work.</div>
+            </div>
+        </div>
+
+        <script>
+            const noscript_div = document.getElementById('ui_noscript_warning');
+            noscript_div.classList.add('div_hidden');
+        </script>
+
+        <!-- Javascript application using the UI shell defined above -->
 
         <script src="xlsx.full.min.js"></script>  <!-- Read Excel files -->
         <script src="levelgraph.min.js"></script> <!-- Graph database   -->
         <script>
-            var g_workbook_data;
-            let activity_db = new Map(); // Map UICs to unit info
-            let graph = levelgraph(level('uicdb'));
-
-            // Ensure the db is already empty, it may be cached from previous page view
-            graph.get({}, (err, results) => {
-                for (const res of results) {
-                    graph.del(res);
-                }
-            });
-
             // Logging function, also goes to the web page
             function output(txt) {
                 const outputDiv = document.getElementById('output');
                 outputDiv.innerHTML = txt;
                 console.log(`output: ${txt}`);
             }
+
+            // UI function, hides all UI divs and then shows the desired ui_* div
+            function showPage(div_id) {
+                // We need to hide all ui_* divs, then show the div we've been
+                // passed as an argument
+                const div_list = document.querySelectorAll('div[id^="ui_"]');
+                for(const div of div_list) {
+                    div.classList.add("div_hidden");
+                }
+
+                const div_to_show = document.getElementById(div_id);
+                if (div_to_show) {
+                    div_to_show.classList.remove("div_hidden");
+                }
+            }
+
+            function clearDatabase(graph) {
+                graph.get({}, (err, results) => {
+                    for (const res of results) {
+                        graph.del(res);
+                    }
+                });
+            }
+
+            //
+            // Application start
+            //
+
+            // global vars
+            var g_workbook_data;
+            let activity_db = new Map(); // Map UICs to unit info
+            let hexastore = level('uicdb');
+            let graph = levelgraph(hexastore);
+
+            // If the hexastore already has entries, assume we've fully loaded the database
+            // from a prior page load
+
+            // Ensure the db is already empty, it may be cached from previous page view
+            clearDatabase(graph);
+            showPage('ui_load_data');
+
+            //
+            // Event handlers (use globals)
+            //
 
             function generateUnitGraph(db, units) {
                 // Go through the list of units and turn them into nodes and
@@ -106,11 +168,10 @@
                     );
 
                     output(`Workbook loaded, ${g_workbook_data.length} records`);
-
-                    if (g_workbook_data.length > 0) {
-                        generateUnitGraph(graph, g_workbook_data);
-                    }
+                    generateUnitGraph(graph, g_workbook_data);
+                    showPage('ui_lookup_uic');
                 }
+
                 reader.readAsArrayBuffer(file);
             }
 
@@ -144,6 +205,7 @@
                 dropTarget.classList.remove('drop_hover');
             }
 
+            // ui_load_data forms
             let dropTarget = document.getElementById('file_drop_target');
             dropTarget.addEventListener('drop', handleFileDrop, false);
 
@@ -154,6 +216,7 @@
             let uploadTarget = document.getElementById('file_load_target');
             uploadTarget.addEventListener('change', handleFileUpload, false);
 
+            // ui_lookup_uic forms
             let btn_UIC = document.getElementById('btn_read_uic');
             btn_UIC.addEventListener('click', () => {
                 const uic_to_load = document.getElementById('txt_uic_entry').value;
