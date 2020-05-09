@@ -26,6 +26,7 @@ This software uses other libraries as well:
 
 LevelGraph, https://github.com/levelgraph/levelgraph, under an MIT license
 SheetJS, https://github.com/SheetJS/sheetjs, under the Apache License 2.0
+PaperCSS, https://www.getpapercss.com/, under the ISC License
 
 These are pre-downloaded for ease of use in the intended application for this
 software. You are encouraged to link to these libraries instead.

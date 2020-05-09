@@ -1,15 +1,21 @@
 <!DOCTYPE html>
-<html>
-    <head><meta charset="utf-8"/>
-        <title>Std Navy Distribution List</title>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="id=edge">
 
-        <!-- Standard Navy Distribution List viewer.
-            Tries to take the SNDL as distributed by the Navy and read it into a database
-            that can be used from any modern web browser. You need to bring the SNDL, the app
-            is supposed to do the rest.
+    <link rel="stylesheet" href="paper.min.css">
 
-            Copyright (c) 2020 Michael Pyne <michael.pyne@gmail.com>
-        -->
+    <title>Std Navy Distribution List</title>
+
+    <!-- Standard Navy Distribution List viewer.
+        Tries to take the SNDL as distributed by the Navy and read it into a database
+        that can be used from any modern web browser. You need to bring the SNDL, the app
+        is supposed to do the rest.
+
+        Copyright (c) 2020 Michael Pyne <michael.pyne@gmail.com>
+    -->
 <style>
 .drop_hover {
     border: 2px solid green;
@@ -23,8 +29,9 @@
 }
 
 </style>
-    </head>
-    <body>
+</head>
+<body>
+    <div class="paper container">
         <h3>SNDL Viewer</h3>
 
         <div id="file_drop_target">Drop SNDL.xlsx on me to load
@@ -180,5 +187,6 @@
                 }
             }, false);
         </script>
-    </body>
+    </div>
+</body>
 </html>

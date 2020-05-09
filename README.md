@@ -10,7 +10,8 @@ Not much more for now, this is mostly for prototyping.
 
 This uses:
 
-* [SheetJS](https://github.com/SheetJS/sheetjs) (Apache 2.0 license), and
-* [LevelGraph](https://github.com/levelgraph/levelgraph) (MIT license)
+* [SheetJS](https://github.com/SheetJS/sheetjs) (Apache 2.0 license),
+* [LevelGraph](https://github.com/levelgraph/levelgraph) (MIT license), and
+* [PaperCSS](https://www.getpapercss.com/) (ISC license)
 
 The software itself is MIT-licensed.
