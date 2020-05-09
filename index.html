@@ -62,9 +62,14 @@ div.div_hidden {
         </div>
 
         <div id="ui_lookup_uic" class="div_hidden">
-            <div id="content">
-                <label>Enter a UIC to read: <input id="txt_uic_entry" placeholder="00076"></input></label>
-                <button id="btn_read_uic">Read UIC</button>
+            <div class="row">
+                <div class="sm-4 col">
+                    <label for="txt_uic_entry">Enter a UIC to read:</label>
+                    <input id="txt_uic_entry" placeholder="00076"></input>
+                </div>
+                <div class="sm-4 col">
+                    <button class="btn-primary" id="btn_read_uic">Read UIC</button>
+                </div>
             </div>
 
             <div id="output">
