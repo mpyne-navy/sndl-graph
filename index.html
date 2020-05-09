@@ -38,8 +38,32 @@ table.tbl_hidden {
 </style>
 </head>
 <body>
+  <div class="row site">
     <div class="paper container">
-        <h3>SNDL Viewer</h3>
+      <div class="col sm-12 padding-top-large">
+        <nav class="fixed split-nav border">
+            <div class="nav-brand">
+                <h3><a href="#">SNDL Viewer</a></h3>
+            </div>
+
+            <div class="collapsible">
+                <input id="collapsible1" type="checkbox" name="nav_collapsible1">
+                <button>
+                    <!-- These are 'structural' for the CSS to show a hamburger menu without JS -->
+                    <label for="collapsible1">
+                        <div class="bar1"></div>
+                        <div class="bar2"></div>
+                        <div class="bar3"></div>
+                    </label>
+                </button>
+
+                <div class="collapsible-body">
+                    <ul class="inline">
+                        <li><a href="https://www.github.com/mpyne-navy/sndl-graph/">See the source on Github</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
 
         <!-- For a simple single page application we just break each page in the 'flow' into
              unique divs with names starting with ui_. We use Javascript to set the appropriate
@@ -316,6 +340,8 @@ table.tbl_hidden {
                     });
             }, false);
         </script>
+      </div>
     </div>
+  </div>
 </body>
 </html>

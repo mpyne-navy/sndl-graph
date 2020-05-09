@@ -6,6 +6,13 @@ into an accessible graph database.
 
 Not much more for now, this is mostly for prototyping.
 
+## Demo
+
+See it in action at [this link](https://mpyne-navy.github.io/sndl-graph/). You
+will need to download the Excel file at the SNDL link above to upload or
+drag-and-drop into the page. For security reasons the Web page is designed to
+avoid reaching out to any third-party site including the Navy's.
+
 # Libraries
 
 This uses:
