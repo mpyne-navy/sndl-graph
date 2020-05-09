@@ -32,6 +32,9 @@ div.div_hidden {
     display: none;
 }
 
+table.tbl_hidden {
+    display: none;
+}
 </style>
 </head>
 <body>
@@ -72,8 +75,23 @@ div.div_hidden {
                 </div>
             </div>
 
+            <div class="row flex-spaces div_hidden" id="sub_ui_lookup_uic_run_banner">
+                <div class="alert alert-primary">Searching for unit and siblings...</div>
+            </div>
+
             <div id="output">
             </div>
+
+            <table id="tbl_unit_list" style="tbl_hidden">
+                <thead>
+                    <tr>
+                        <th>UIC</th>
+                        <th>Activity Name</th>
+                    </tr>
+                </thead>
+                <tbody id="tbl_unit_list_rows">
+                </tbody>
+            </table>
         </div>
 
         <!-- Never used, should be hidden by the JS automatically -->
@@ -244,39 +262,58 @@ div.div_hidden {
                 const uic_to_load = document.getElementById('txt_uic_entry').value;
                 console.log(`Loading UIC ${uic_to_load}`);
 
+                const searching_msg = document.getElementById('sub_ui_lookup_uic_run_banner');
+                searching_msg.classList.remove('div_hidden');
+
                 const obj = g_workbook_data.filter(e => e.UIC === uic_to_load)[0];
 
-                if(obj) {
-                    var out_string = `Found ${obj.ACT_TITLE}`;
-                    console.dir(obj);
-
-                    // Look for siblings: UICs that are 'isic-of' related to the same ISIC
-                    // that isic-of points to us, by following the pointer back to the ISIC
-                    graph.nav(obj.UIC).archIn('isic-of').archOut('isic-of').
-                        solutions((err, results) => {
-                            if(err) {
-                                output(out_string);
-                                console.error(err);
-                                return;
-                            }
-
-                            if(results.length > 0) {
-                                out_string = out_string + "<br/>Sibling units: <br/>";
-                            }
-
-                            for(const res of results) {
-                                const uic = res.x1;
-                                const sibling_name = activity_db.get(uic).ACT_TITLE || `Unknown unit`;
-
-                                out_string = out_string + "<br/>";
-                                out_string = out_string + `${sibling_name} (${uic})`;
-                            }
-
-                            output(out_string);
-                        });
-                } else {
+                if(!obj) {
                     output(`Found no result!`);
+                    return;
                 }
+
+                var out_string = `Found ${obj.ACT_TITLE}`;
+                console.dir(obj);
+
+                // Look for siblings: UICs that are 'isic-of' related to the same ISIC
+                // that isic-of points to us, by following the pointer back to the ISIC
+                graph.nav(obj.UIC).archIn('isic-of').archOut('isic-of').
+                    solutions((err, results) => {
+                        searching_msg.classList.add('div_hidden');
+
+                        if(err) {
+                            output(out_string);
+                            console.error(err);
+                            return;
+                        }
+
+                        output(`Units found: ${results.length}`);
+
+                        // show the table holding results
+                        document.getElementById('tbl_unit_list').classList.remove('tbl_hidden');
+                        const tbody = document.getElementById('tbl_unit_list_rows');
+
+                        // remove entries from before, if any
+                        while(tbody.firstElementChild) {
+                            tbody.removeChild(tbody.firstElementChild);
+                        }
+
+                        for(const res of results) {
+                            const uic = res.x1;
+                            const sibling_name = activity_db.get(uic).ACT_TITLE || `Unknown unit`;
+
+                            let tr       = document.createElement('tr');
+                            let td_uic   = document.createElement('td');
+                            let td_title = document.createElement('td');
+
+                            td_uic.textContent = uic;
+                            td_title.textContent = sibling_name;
+
+                            tr.appendChild(td_uic);
+                            tr.appendChild(td_title);
+                            tbody.appendChild(tr);
+                        }
+                    });
             }, false);
         </script>
     </div>
