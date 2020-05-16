@@ -296,6 +296,18 @@ table.tbl_hidden {
                 dropTarget.classList.remove('drop_hover');
             }
 
+            function graph_get_p(preds) {
+                return new Promise((resolve, reject) => {
+                    graph.get(preds, (err, results) => {
+                        if(err) {
+                            reject(err);
+                        } else {
+                            resolve(results);
+                        }
+                    });
+                });
+            }
+
             // ui_load_data forms
             let dropTarget = document.getElementById('file_drop_target');
             dropTarget.addEventListener('drop', handleFileDrop, false);
@@ -385,54 +397,65 @@ table.tbl_hidden {
                 var out_string = `Found ${obj.ACT_TITLE}`;
                 console.dir(obj);
 
-                const find_isic = (cur_isic) => {
+                searching_msg.classList.add('div_hidden');
+
+                const find_isic = async (cur_isic) => {
                     console.log(`Looking for ISIC for ${cur_isic}`);
-                    graph.get({
-                        predicate: "isic-of",
-                        object: cur_isic,
-                    }, (err, results) => {
-                        searching_msg.classList.add('div_hidden');
 
-                        if(err || results.length > 1) {
-                            console.error(`Error finding ISIC for ${cur_isic}`);
-                            if(err) {
-                                console.error(err);
-                            } else {
-                                console.error(`  too many results for ${cur_isic}: ${results}`);
-                            }
+                    try {
+                        const results = await graph_get_p({
+                            predicate: "isic-of",
+                            object: cur_isic,
+                        });
 
-                            return;
+                        if (results.length > 1) {
+                            throw new Error(`  too many results for ${cur_isic}: ${results}`);
+                        } else if (results.length === 0) {
+                            throw new Error(`${cur_isic} has no boss???`);
                         }
 
-                        if(results.length === 0) {
-                            // No ISIC???
-                            console.log(`${obj.UIC} seems to have no Flag in the admin chain of command?`);
-                        } else {
-                            // One result, if it's a Flag also then we're done, if not, search again
-                            const new_isic = results[0].subject;
-                            graph.get({
-                                subject: new_isic,
-                                predicate: "is-flag",
-                                object: 'rank:flag',
-                            }, (err, results) => {
-                                if(err) {
-                                    console.error(`Error looking for Flag role for ${new_isic}`);
-                                    console.error(err);
-                                    return;
-                                }
-
-                                if(results.length > 0) {
-                                    // We found it!
-                                    output(`The first Flag for ${obj.UIC} is ${new_isic}!`);
-                                } else {
-                                    // Try again...
-                                    find_isic(new_isic);
-                                }
-                            });
-                        }
-                    });
+                        return results[0].subject;
+                    }
+                    catch (err) {
+                        console.error(`Error finding ISIC for ${cur_isic}`);
+                    }
                 };
-                find_isic(obj.UIC);
+
+                const check_if_uic_is_flag = async(uic) => {
+                    const results = await graph_get_p({
+                        subject: uic,
+                        predicate: "is-flag",
+                        object: 'rank:flag',
+                    });
+
+                    return (results.length > 0);
+                };
+
+                const run_check = async (uic) => {
+                    try {
+                        let cur_uic = uic;
+                        let done = await check_if_uic_is_flag(cur_uic);
+                        let i = 0;
+
+                        while (!done && i++ < 8) {
+                            console.log(`Finding ISIC for non-Flag unit ${cur_uic}`);
+                            cur_uic = await find_isic(cur_uic);
+                            done    = await check_if_uic_is_flag(cur_uic);
+                        }
+
+                        if (!done) {
+                            throw new Error(`Couldn't find a Flag in the chain of command for ${uic}!`);
+                        }
+
+                        output(`The first Flag for ${uic} is ${cur_uic}!`);
+                    }
+                    catch (err) {
+                        console.error(`Error looking for Flag role for ${uic}`);
+                        console.error(err);
+                    }
+                };
+
+                run_check(obj.UIC).then(() => { console.log('Done with promise chain') });
             }, false);
         </script>
       </div>
