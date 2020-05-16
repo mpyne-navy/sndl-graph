@@ -96,6 +96,7 @@ table.tbl_hidden {
                 </div>
                 <div class="sm-4 col">
                     <button class="btn-primary" id="btn_read_uic">Read UIC</button>
+                    <button class="btn-primary" id="btn_find_flag">Find First Flag</button>
                 </div>
             </div>
 
@@ -191,6 +192,16 @@ table.tbl_hidden {
             function generateUnitGraph(db, units) {
                 // Go through the list of units and turn them into nodes and
                 // edges for the graph query
+
+                const act_heads = [
+                    'COMMANDER',
+                    'COMMANDING GENERAL',
+                    'COMMANDANT',
+                    'PRESIDENT',
+                    'CHIEF OF NAVAL PERSONNEL',
+                    ];
+                const is_flag = (unit_head) => act_heads.some((el) => el === unit_head);
+
                 for (const unit of units) {
                     if (!unit.PARENT_UIC || !unit.UIC) {
                         console.log(`Ignoring UIC-less unit ${unit.ACT_TITLE}`);
@@ -199,9 +210,25 @@ table.tbl_hidden {
 
                     activity_db.set(unit.UIC, unit);
 
-                    var triple = { subject: unit.PARENT_UIC, predicate: 'isic-of', object: unit.UIC };
+                    let edges = new Array();
 
-                    db.put(triple, (err) => {
+                    edges.push({
+                        subject: unit.PARENT_UIC,
+                        predicate: 'isic-of',
+                        object: unit.UIC
+                    });
+
+                    // Heuristic to try to find units commanded by an O-7 or
+                    // above
+                    if (is_flag(unit.ACT_HEAD || '')) {
+                        edges.push({
+                            subject: unit.UIC,
+                            predicate: 'is-flag',
+                            object: 'rank:flag'
+                        });
+                    }
+
+                    db.put(edges, (err) => {
                         if(err) { console.error(err); }
                     });
                 }
@@ -338,6 +365,74 @@ table.tbl_hidden {
                             tbody.appendChild(tr);
                         }
                     });
+            }, false);
+
+            let btn_findFlag = document.getElementById('btn_find_flag');
+            btn_findFlag.addEventListener('click', () => {
+                const uic_to_load = document.getElementById('txt_uic_entry').value;
+                console.log(`Finding first flag in chain of command for UIC ${uic_to_load}`);
+
+                const searching_msg = document.getElementById('sub_ui_lookup_uic_run_banner');
+                searching_msg.classList.remove('div_hidden');
+
+                const obj = g_workbook_data.filter(e => e.UIC === uic_to_load)[0];
+
+                if(!obj) {
+                    output(`Found no result!`);
+                    return;
+                }
+
+                var out_string = `Found ${obj.ACT_TITLE}`;
+                console.dir(obj);
+
+                const find_isic = (cur_isic) => {
+                    console.log(`Looking for ISIC for ${cur_isic}`);
+                    graph.get({
+                        predicate: "isic-of",
+                        object: cur_isic,
+                    }, (err, results) => {
+                        searching_msg.classList.add('div_hidden');
+
+                        if(err || results.length > 1) {
+                            console.error(`Error finding ISIC for ${cur_isic}`);
+                            if(err) {
+                                console.error(err);
+                            } else {
+                                console.error(`  too many results for ${cur_isic}: ${results}`);
+                            }
+
+                            return;
+                        }
+
+                        if(results.length === 0) {
+                            // No ISIC???
+                            console.log(`${obj.UIC} seems to have no Flag in the admin chain of command?`);
+                        } else {
+                            // One result, if it's a Flag also then we're done, if not, search again
+                            const new_isic = results[0].subject;
+                            graph.get({
+                                subject: new_isic,
+                                predicate: "is-flag",
+                                object: 'rank:flag',
+                            }, (err, results) => {
+                                if(err) {
+                                    console.error(`Error looking for Flag role for ${new_isic}`);
+                                    console.error(err);
+                                    return;
+                                }
+
+                                if(results.length > 0) {
+                                    // We found it!
+                                    output(`The first Flag for ${obj.UIC} is ${new_isic}!`);
+                                } else {
+                                    // Try again...
+                                    find_isic(new_isic);
+                                }
+                            });
+                        }
+                    });
+                };
+                find_isic(obj.UIC);
             }, false);
         </script>
       </div>
